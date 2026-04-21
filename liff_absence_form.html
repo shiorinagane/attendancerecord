@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>欠席連絡</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 24px 16px 48px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      padding: 28px 24px;
+      width: 100%;
+      max-width: 480px;
+    }
+
+    h1 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1a1a1a;
+      margin-bottom: 4px;
+    }
+
+    .subtitle {
+      font-size: 13px;
+      color: #888;
+      margin-bottom: 24px;
+    }
+
+    .field {
+      margin-bottom: 18px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #444;
+      margin-bottom: 6px;
+    }
+
+    label .required {
+      color: #e53e3e;
+      margin-left: 4px;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1.5px solid #ddd;
+      border-radius: 10px;
+      font-size: 15px;
+      color: #1a1a1a;
+      background: #fafafa;
+      transition: border-color 0.2s;
+      -webkit-appearance: none;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: #06c755;
+      background: #fff;
+    }
+
+    textarea { resize: vertical; min-height: 80px; }
+
+    .btn {
+      width: 100%;
+      padding: 15px;
+      background: #06c755;
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: background 0.2s;
+    }
+
+    .btn:active { background: #05a847; }
+    .btn:disabled { background: #aaa; cursor: not-allowed; }
+
+    .message {
+      text-align: center;
+      padding: 16px;
+      border-radius: 10px;
+      font-size: 14px;
+      margin-top: 16px;
+      display: none;
+    }
+
+    .message.success {
+      background: #e6f9ee;
+      color: #1a7f4b;
+      display: block;
+    }
+
+    .message.error {
+      background: #fdecea;
+      color: #c0392b;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>欠席連絡</h1>
+    <p class="subtitle">チャレンジキッズ保育園</p>
+
+    <form id="absenceForm">
+      <div class="field">
+        <label>お子さまのお名前<span class="required">*</span></label>
+        <input type="text" id="childName" placeholder="例：山田 花子" required />
+      </div>
+
+      <div class="field">
+        <label>クラス<span class="required">*</span></label>
+        <select id="className" required>
+          <option value="">選択してください</option>
+          <option value="0歳児クラス">0歳児クラス</option>
+          <option value="1歳児クラス">1歳児クラス</option>
+          <option value="2歳児クラス">2歳児クラス</option>
+          <option value="3歳児クラス">3歳児クラス</option>
+          <option value="4歳児クラス">4歳児クラス</option>
+          <option value="5歳児クラス">5歳児クラス</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>欠席日<span class="required">*</span></label>
+        <input type="date" id="absenceDate" required />
+      </div>
+
+      <div class="field">
+        <label>欠席理由<span class="required">*</span></label>
+        <select id="reason" required>
+          <option value="">選択してください</option>
+          <option value="発熱">発熱</option>
+          <option value="体調不良（発熱なし）">体調不良（発熱なし）</option>
+          <option value="嘔吐・下痢">嘔吐・下痢</option>
+          <option value="感染症">感染症</option>
+          <option value="家庭の都合">家庭の都合</option>
+          <option value="その他">その他</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>補足・体温など（任意）</label>
+        <textarea id="note" placeholder="例：昨夜から38.2℃の発熱があります"></textarea>
+      </div>
+
+      <div class="field">
+        <label>保護者のお名前<span class="required">*</span></label>
+        <input type="text" id="parentName" placeholder="例：山田 太郎" required />
+      </div>
+
+      <button type="submit" class="btn" id="submitBtn">送信する</button>
+    </form>
+
+    <div class="message" id="resultMessage"></div>
+  </div>
+
+  <script>
+    // ---- 設定 ----
+    const LIFF_ID = "YOUR_LIFF_ID";           // LIFFアプリIDに書き換える
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbzUbKYwQSEC79mYfqDP8K6w4qh8ubzEgmFDxJXjX2fdL9UmcFKd2nywaJDexPvKw9vt/exec";    // GASのデプロイURLに書き換える
+    // --------------
+
+    // 今日の日付をデフォルト値にセット
+    const today = new Date().toLocaleDateString("sv-SE"); // YYYY-MM-DD
+    document.getElementById("absenceDate").value = today;
+
+    // LIFF初期化
+    liff.init({ liffId: LIFF_ID }).catch(() => {
+      // LIFF外（ブラウザ直アクセス等）でも動作継続
+    });
+
+    document.getElementById("absenceForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const btn = document.getElementById("submitBtn");
+      const msgEl = document.getElementById("resultMessage");
+      btn.disabled = true;
+      btn.textContent = "送信中…";
+      msgEl.className = "message";
+      msgEl.style.display = "none";
+
+      const payload = {
+        childName:   document.getElementById("childName").value.trim(),
+        className:   document.getElementById("className").value,
+        absenceDate: document.getElementById("absenceDate").value,
+        reason:      document.getElementById("reason").value,
+        note:        document.getElementById("note").value.trim(),
+        parentName:  document.getElementById("parentName").value.trim(),
+        submittedAt: new Date().toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" }),
+      };
+
+      // LINEのユーザーIDを取得（取れる場合のみ付与）
+      if (liff.isLoggedIn && liff.isLoggedIn()) {
+        const profile = await liff.getProfile().catch(() => null);
+        if (profile) payload.lineUserId = profile.userId;
+      }
+
+      try {
+        const res = await fetch(GAS_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        const result = await res.json();
+
+        if (result.status === "ok") {
+          msgEl.className = "message success";
+          msgEl.textContent = "欠席連絡を送信しました。お大事にされてください。";
+          document.getElementById("absenceForm").reset();
+          document.getElementById("absenceDate").value = today;
+
+          // LINEアプリ内なら閉じる
+          if (liff.isInClient && liff.isInClient()) {
+            setTimeout(() => liff.closeWindow(), 2000);
+          }
+        } else {
+          throw new Error(result.message || "エラーが発生しました");
+        }
+      } catch (err) {
+        msgEl.className = "message error";
+        msgEl.textContent = "送信に失敗しました。時間をおいて再度お試しください。";
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "送信する";
+        msgEl.style.display = "block";
+      }
+    });
+  </script>
+</body>
+</html>
